@@ -17,7 +17,7 @@ export default function RootLayout({
       <head>
         {/* Arial is a system font, no Google Fonts import is needed */}
       </head>
-      <body className="font-body antialiased h-full">
+      <body className="h-full antialiased">
         {children}
         <Toaster />
       </body>
