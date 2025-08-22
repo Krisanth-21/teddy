@@ -66,7 +66,7 @@ const generateSpeechFlow = ai.defineFlow(
 
     // If a cloned voiceId is provided, you would use it with the TTS API.
     // Since we are mocking the voice cloning, we will just use a prebuilt voice.
-    const voiceName = voiceId === 'mock-cloned-voice-id' ? 'Sirius' : 'Algenib';
+    const voiceName = voiceId === 'mock-cloned-voice-id' ? 'Schedar' : 'Algenib';
 
     const { media } = await ai.generate({
       model: googleAI.model('gemini-2.5-flash-preview-tts'),
