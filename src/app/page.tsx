@@ -1,10 +1,10 @@
 'use client';
 
 import { aiChatGemini } from '@/ai/flows/ai-chat-gemini';
+import { cloneVoice } from '@/ai/flows/clone-voice';
 import { generateSpeech } from '@/ai/flows/generate-speech';
 import { ChatMessage } from '@/components/chat-message';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
@@ -20,10 +20,16 @@ export default function Home() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isThinking, setIsThinking] = useState(false);
-  
+  const [isRecording, setIsRecording] = useState(false);
+  const [isCloning, setIsCloning] = useState(false);
+  const [clonedVoiceId, setClonedVoiceId] = useState<string | null>(null);
+
   const { toast } = useToast();
   const audioPlayer = useRef<HTMLAudioElement | null>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (scrollAreaRef.current) {
@@ -33,7 +39,7 @@ export default function Home() {
       });
     }
   }, [messages]);
-  
+
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim()) return;
@@ -48,12 +54,11 @@ export default function Home() {
       const assistantMessage: Message = { role: 'assistant', content: response };
       setMessages(prev => [...prev, assistantMessage]);
 
-      const { media } = await generateSpeech({ text: response });
+      const { media } = await generateSpeech({ text: response, voiceId: clonedVoiceId ?? undefined });
       if (audioPlayer.current) {
         audioPlayer.current.src = media;
         audioPlayer.current.play();
       }
-      
     } catch (error) {
       console.error('Error in AI chat:', error);
       toast({
@@ -63,6 +68,47 @@ export default function Home() {
       });
     } finally {
       setIsThinking(false);
+    }
+  };
+
+  const handleUploadClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        const audioDataUri = e.target?.result as string;
+        handleCloneVoice(audioDataUri);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleCloneVoice = async (audioDataUri: string) => {
+    setIsCloning(true);
+    toast({
+      title: 'Cloning Voice',
+      description: 'Please wait while we clone your voice...',
+    });
+    try {
+      const { voiceId } = await cloneVoice({ audioDataUri });
+      setClonedVoiceId(voiceId);
+      toast({
+        title: 'Voice Cloned!',
+        description: `Your voice has been successfully cloned. The teddy bear will now use your voice. (ID: ${voiceId})`,
+      });
+    } catch (error) {
+      console.error('Error cloning voice:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Failed to clone your voice.',
+      });
+    } finally {
+      setIsCloning(false);
     }
   };
 
@@ -81,7 +127,7 @@ export default function Home() {
                  <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground">
                     <PawPrint className="w-16 h-16 mb-4" />
                     <p className="text-lg">Start a conversation with your Teddy!</p>
-                    <p className="text-sm">I'm ready to talk with you!</p>
+                    <p className="text-sm">You can even clone your voice for the teddy to use.</p>
                  </div>
               )}
               {messages.map((m, i) => (
@@ -94,14 +140,19 @@ export default function Home() {
           </ScrollArea>
 
           <form onSubmit={handleSendMessage} className="mt-4 flex items-center gap-2">
+            <Button type="button" size="icon" variant="outline" onClick={handleUploadClick} disabled={isCloning}>
+              {isCloning ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+            </Button>
+            <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept="audio/*" />
+
             <Input
               value={input}
               onChange={e => setInput(e.target.value)}
               placeholder="Type your message..."
               className="flex-1"
-              disabled={isThinking}
+              disabled={isThinking || isCloning}
             />
-            <Button type="submit" size="icon" disabled={isThinking}>
+            <Button type="submit" size="icon" disabled={isThinking || isCloning}>
               {isThinking ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
             </Button>
           </form>

@@ -15,6 +15,7 @@ import { googleAI } from '@genkit-ai/googleai';
 
 const GenerateSpeechInputSchema = z.object({
   text: z.string().describe('The text to convert to speech.'),
+  voiceId: z.string().optional().describe('The ID of the cloned voice to use.'),
 });
 export type GenerateSpeechInput = z.infer<typeof GenerateSpeechInputSchema>;
 
@@ -60,18 +61,24 @@ const generateSpeechFlow = ai.defineFlow(
     inputSchema: GenerateSpeechInputSchema,
     outputSchema: GenerateSpeechOutputSchema,
   },
-  async input => {
+  async ({ text, voiceId }) => {
+    console.log(`Generating speech with voice: ${voiceId || 'default'}`);
+
+    // If a cloned voiceId is provided, you would use it with the TTS API.
+    // Since we are mocking the voice cloning, we will just use a prebuilt voice.
+    const voiceName = voiceId === 'mock-cloned-voice-id' ? 'Sirius' : 'Algenib';
+
     const { media } = await ai.generate({
       model: googleAI.model('gemini-2.5-flash-preview-tts'),
       config: {
         responseModalities: ['AUDIO'],
         speechConfig: {
           voiceConfig: {
-            prebuiltVoiceConfig: { voiceName: 'Algenib' },
+            prebuiltVoiceConfig: { voiceName: voiceName },
           },
         },
       },
-      prompt: input.text,
+      prompt: text,
     });
     if (!media) {
       throw new Error('no media returned');

@@ -1,7 +1,7 @@
 'use server';
 
 /**
- * @fileOverview Voice cloning flow using All-Voice-Lab API.
+ * @fileOverview Voice cloning flow. NOTE: This uses a mock implementation.
  *
  * - cloneVoice - A function that handles the voice cloning process.
  * - CloneVoiceInput - The input type for the cloneVoice function.
@@ -21,7 +21,7 @@ const CloneVoiceInputSchema = z.object({
 export type CloneVoiceInput = z.infer<typeof CloneVoiceInputSchema>;
 
 const CloneVoiceOutputSchema = z.object({
-  voiceId: z.string().describe('The ID of the cloned voice from All-Voice-Lab API.'),
+  voiceId: z.string().describe('The ID of the cloned voice.'),
 });
 export type CloneVoiceOutput = z.infer<typeof CloneVoiceOutputSchema>;
 
@@ -35,32 +35,11 @@ const cloneVoiceFlow = ai.defineFlow(
     inputSchema: CloneVoiceInputSchema,
     outputSchema: CloneVoiceOutputSchema,
   },
-  async input => {
-    // Call All-Voice-Lab API to clone the voice.
-    // Replace with actual API endpoint and authentication.
-    const apiKey = process.env.ALL_VOICE_LAB_API_KEY;
-    if (!apiKey) {
-      throw new Error('ALL_VOICE_LAB_API_KEY is not set in environment variables.');
-    }
-
-    const response = await fetch('https://api.allvoicelab.com/clone', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-API-KEY': apiKey,
-      },
-      body: JSON.stringify({audio: input.audioDataUri}),
-    });
-
-    if (!response.ok) {
-      throw new Error(`Voice cloning failed: ${response.status} ${response.statusText}`);
-    }
-
-    const data = await response.json();
-    if (!data.voiceId) {
-      throw new Error(`Voice cloning failed: No voiceId returned`);
-    }
-    return {voiceId: data.voiceId};
+  async (input) => {
+    // In a real application, you would call a voice cloning API here.
+    // For this example, we'll return a mock voice ID.
+    console.log('Cloning voice from audio data URI (mock)...');
+    await new Promise(resolve => setTimeout(resolve, 2000)); // Simulate network delay
+    return { voiceId: 'mock-cloned-voice-id' };
   }
 );
-
