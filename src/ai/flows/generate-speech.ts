@@ -1,9 +1,9 @@
 'use server';
 
 /**
- * @fileOverview This file contains the Genkit flow for generating speech using the All-Voice-Lab API with a cloned voice.
+ * @fileOverview This file contains the Genkit flow for generating speech using Gemini.
  *
- * - generateSpeech - A function that generates speech from text using a cloned voice.
+ * - generateSpeech - A function that generates speech from text.
  * - GenerateSpeechInput - The input type for the generateSpeech function.
  * - GenerateSpeechOutput - The return type for the generateSpeech function.
  */
@@ -11,9 +11,9 @@
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 import wav from 'wav';
+import { googleAI } from '@genkit-ai/googleai';
 
 const GenerateSpeechInputSchema = z.object({
-  voiceId: z.string().describe('The ID of the cloned voice to use.'),
   text: z.string().describe('The text to convert to speech.'),
 });
 export type GenerateSpeechInput = z.infer<typeof GenerateSpeechInputSchema>;
@@ -26,43 +26,6 @@ export type GenerateSpeechOutput = z.infer<typeof GenerateSpeechOutputSchema>;
 export async function generateSpeech(input: GenerateSpeechInput): Promise<GenerateSpeechOutput> {
   return generateSpeechFlow(input);
 }
-
-const generateSpeechFlow = ai.defineFlow(
-  {
-    name: 'generateSpeechFlow',
-    inputSchema: GenerateSpeechInputSchema,
-    outputSchema: GenerateSpeechOutputSchema,
-  },
-  async input => {
-    const apiKey = process.env.ALL_VOICE_LAB_API_KEY;
-    if (!apiKey) {
-      throw new Error('ALL_VOICE_LAB_API_KEY is not set in environment variables.');
-    }
-
-    const response = await fetch('https://api.allvoicelab.com/tts', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-API-KEY': apiKey,
-      },
-      body: JSON.stringify({
-        voiceId: input.voiceId,
-        text: input.text,
-      }),
-    });
-
-    if (!response.ok) {
-      throw new Error(`Text-to-speech failed: ${response.status} ${response.statusText}`);
-    }
-
-    const data = await response.json();
-
-    if (!data.audio) {
-      throw new Error(`Text-to-speech failed: No audio returned`);
-    }
-    return {media: data.audio};
-  }
-);
 
 async function toWav(
   pcmData: Buffer,
@@ -90,3 +53,35 @@ async function toWav(
     writer.end();
   });
 }
+
+const generateSpeechFlow = ai.defineFlow(
+  {
+    name: 'generateSpeechFlow',
+    inputSchema: GenerateSpeechInputSchema,
+    outputSchema: GenerateSpeechOutputSchema,
+  },
+  async input => {
+    const { media } = await ai.generate({
+      model: googleAI.model('gemini-2.5-flash-preview-tts'),
+      config: {
+        responseModalities: ['AUDIO'],
+        speechConfig: {
+          voiceConfig: {
+            prebuiltVoiceConfig: { voiceName: 'Algenib' },
+          },
+        },
+      },
+      prompt: input.text,
+    });
+    if (!media) {
+      throw new Error('no media returned');
+    }
+    const audioBuffer = Buffer.from(
+      media.url.substring(media.url.indexOf(',') + 1),
+      'base64'
+    );
+    return {
+      media: 'data:audio/wav;base64,' + (await toWav(audioBuffer)),
+    };
+  }
+);
