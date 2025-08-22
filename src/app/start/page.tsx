@@ -1,3 +1,4 @@
+
 'use client';
 
 import { cloneVoice } from '@/ai/flows/clone-voice';
@@ -29,7 +30,7 @@ export default function StartPage() {
       const reader = new FileReader();
       reader.onload = (e) => {
         const audioDataUri = e.target?.result as string;
-        setAudioUrl(audioDataUri);
+        setAudioUrl(URL.createObjectURL(file));
         // Automatically proceed to clone after selection
         handleCloneVoice(audioDataUri);
       };
@@ -49,16 +50,13 @@ export default function StartPage() {
 
       mediaRecorderRef.current.onstop = () => {
         const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/wav' });
-        const audioDataUri = URL.createObjectURL(audioBlob);
-        
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          const audioDataUriForCloning = e.target?.result as string;
-          setAudioUrl(audioDataUriForCloning);
-          handleCloneVoice(audioDataUriForCloning);
+        const dataUriReader = new FileReader();
+        dataUriReader.onload = (e) => {
+            const audioDataUriForCloning = e.target?.result as string;
+            setAudioUrl(URL.createObjectURL(audioBlob));
+            handleCloneVoice(audioDataUriForCloning);
         };
-        reader.readAsDataURL(audioBlob);
-
+        dataUriReader.readAsDataURL(audioBlob);
       };
 
       mediaRecorderRef.current.start();
@@ -91,13 +89,11 @@ export default function StartPage() {
     });
     try {
       const { voiceId } = await cloneVoice({ audioDataUri });
-      // In a real app, we'd pass this to the chat page
       localStorage.setItem('clonedVoiceId', voiceId);
       toast({
         title: 'Voice Cloned!',
         description: `Your voice has been successfully cloned.`,
       });
-      // Delay navigation to allow user to see the toast
       setTimeout(() => {
         router.push('/chat');
       }, 1000);
@@ -119,7 +115,7 @@ export default function StartPage() {
         <CardHeader>
           <CardTitle>Setup Your Voice</CardTitle>
           <CardDescription>
-            Give your teddy bear a voice! Upload an audio file or record your own voice.
+            Give your teddy bear a voice! Upload an audio file or record your own voice to get started.
           </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-6">
@@ -160,11 +156,12 @@ export default function StartPage() {
             </CardContent>
           </Card>
 
-          {audioUrl && !isCloning && (
-             <div className="flex flex-col items-center gap-4">
+          {audioUrl && (
+             <div className="flex flex-col items-center gap-4 border-t pt-6">
+                 <p className="text-sm text-muted-foreground">Your recorded/uploaded audio:</p>
                 <audio src={audioUrl} controls className="w-full" />
-                <Button onClick={() => router.push('/chat')} variant="outline">
-                    Proceed to Chat <ArrowRight className="ml-2 h-4 w-4"/>
+                <Button onClick={() => router.push('/chat')} variant="outline" disabled={isCloning}>
+                    {isCloning ? 'Cloning in progress...' : 'Proceed to Chat'} <ArrowRight className="ml-2 h-4 w-4"/>
                 </Button>
              </div>
           )}

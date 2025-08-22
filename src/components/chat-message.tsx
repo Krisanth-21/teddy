@@ -1,7 +1,8 @@
+
 "use client"
 
 import { TeddyBearIcon } from '@/components/icons/teddy-bear-icon';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 import { Loader2, User } from 'lucide-react';
 
@@ -18,21 +19,17 @@ export function ChatMessage({ message }: ChatMessageProps) {
   return (
     <div
       className={cn(
-        'flex items-start gap-3 animate-in fade-in',
-        !isAssistant && 'flex-row-reverse'
+        'flex items-start gap-3 animate-in fade-in message-item',
+        isAssistant ? 'justify-start' : 'justify-end'
       )}
     >
-      <Avatar className={cn('h-10 w-10 border flex-shrink-0')}>
-          {isAssistant ? (
-            <div className="bg-primary/10 rounded-full p-1.5">
-              <TeddyBearIcon className="h-7 w-7 text-primary" />
+      {isAssistant && (
+          <Avatar className={cn('h-10 w-10 border flex-shrink-0')}>
+            <div className="bg-primary/10 rounded-full p-1.5 flex items-center justify-center h-full w-full">
+                <TeddyBearIcon className="h-7 w-7 text-primary" />
             </div>
-          ) : (
-            <AvatarFallback className="bg-primary text-primary-foreground">
-              <User className="h-5 w-5" />
-            </AvatarFallback>
-          )}
-      </Avatar>
+        </Avatar>
+      )}
       <div
         className={cn(
           'max-w-[80%] rounded-lg p-3 text-sm shadow-sm',
@@ -47,6 +44,13 @@ export function ChatMessage({ message }: ChatMessageProps) {
             <p className="whitespace-pre-wrap">{message.content}</p>
         )}
       </div>
+      {!isAssistant && (
+         <Avatar className={cn('h-10 w-10 border flex-shrink-0')}>
+            <AvatarFallback className="bg-primary text-primary-foreground">
+              <User className="h-5 w-5" />
+            </AvatarFallback>
+        </Avatar>
+      )}
     </div>
   );
 }
